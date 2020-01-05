@@ -18,7 +18,11 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: Apache 2.0 License",
+        "Development Status :: 3 - Alpha",
+        "Environment :: Web Environment",
+        "Natural Language :: English",
+        "Topic :: Multimedia :: Graphics",
+        "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent"
     ],
 )
