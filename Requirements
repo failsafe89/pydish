@@ -1,0 +1,5 @@
+- Webserver to serve device.html for your app
+  * Cherrypy? (This should be an entirely separate process)
+- Websocket server to process Display API and Input API messages and
+  dispatch them to the correct queues, resolve synch issues, etc
+- Public API access to Display API queue and Input API queue, via API functions
