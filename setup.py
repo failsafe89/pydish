@@ -26,7 +26,7 @@ setuptools.setup(
         "Operating System :: OS Independent"
     ],
     package_data = {
-        '': [],
+        '': ["static/*.html", "static/*.js"],
         'static': ['*.html', "*.js"],
     },
 )
