@@ -7,7 +7,7 @@ with open('README.md', 'r') as f:
 
 setuptools.setup(
     name='pydish',
-    version=0.101,
+    version=0.102,
     scripts=[],
     author='failsafe89',
     author_email='',
