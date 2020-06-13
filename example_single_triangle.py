@@ -33,7 +33,8 @@ d.init_display()
 width, height = d.get_resolution()
 print("Width: %d Height: %d" % (width, height))
 
-vertex_shader_id = d.compile_vertex_shader("""
+# vertex_shader_id = d.compile_vertex_shader("""
+vertex_shader = """
 #version 300 es
 
 // fragment shaders don't have a default precision so we need
@@ -76,9 +77,11 @@ void main() {
 
   //final_vert = translated_position;
 }
-""".lstrip())
+""".lstrip()
+# """.lstrip())
 
-fragment_shader_id = d.compile_fragment_shader("""
+# fragment_shader_id = d.compile_fragment_shader("""
+fragment_shader = """
 #version 300 es
  
 // fragment shaders don't have a default precision so we need
@@ -114,33 +117,36 @@ void main() {
   //vec2 delta_dist = final_vert - screenSpace;
   //vec2 delta_ident = vec2(0.0, 1.0) - identifySpace;
 }
-""".lstrip())
+""".lstrip()
+# """.lstrip())
 
-program_id = d.create_program(vertex_shader_id, fragment_shader_id,
-uniforms={
-    "u_resolution": {"size": 2},
-    "u_color": {"size": 4},
-    "u_translation": {"size": 2},
-    "u_rotation": {"size": 2},
-    "u_scale": {"size": 2},
-},
-attributes={
-    "a_position": {"size": 2},
-})
+shader = d.new_shader(vertex_shader, fragment_shader)
+# program_id = d.create_program_old(vertex_shader_id, fragment_shader_id,
+# uniforms={
+#     "u_resolution": {"size": 2},
+#     "u_color": {"size": 4},
+#     "u_translation": {"size": 2},
+#     "u_rotation": {"size": 2},
+#     "u_scale": {"size": 2},
+# },
+# attributes={
+#     "a_position": {"size": 2},
+# })
 
 # Create a buffer and link it to the a_position attribute
-vertex_buffer = d.create_buffer()
-d.program_link_attributes(program_id, {
-    "a_position": vertex_buffer
-})
+ao = shader.new_array_object(["a_position"])
+# vertex_buffer = d.create_buffer()
+# d.program_link_attributes(program_id, {
+#     "a_position": vertex_buffer
+# })
 
 # Update the vertex buffer and uniforms for the single triangle
-d.buffer_update_data(vertex_buffer, [
+ao.modify([
     100, 100,
     100, 50,
     150, 100
 ])
-d.program_update_uniforms(program_id, {
+shader.update_uniforms({
     "u_resolution": [width, height],
     "u_translation": [0.0, 0.0],
     "u_rotation": [0.0, 1.0],
@@ -156,7 +162,7 @@ d.set_gl_clear_color(0, 0, 0, 0)
 d.clear()
 
 # Draw the single triangle
-d.execute_program(program_id, "triangles")
+shader.execute(ao)
 d.update_canvas()
 
 print("Press ENTER to exit")

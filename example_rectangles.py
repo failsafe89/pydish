@@ -33,7 +33,8 @@ d.init_display()
 width, height = d.get_resolution()
 print("Width: %d Height: %d" % (width, height))
 
-vertex_shader_id = d.compile_vertex_shader("""
+# vertex_shader_id = d.compile_vertex_shader("""
+vertex_shader = """
 #version 300 es
 
 // fragment shaders don't have a default precision so we need
@@ -76,9 +77,11 @@ void main() {
 
   //final_vert = translated_position;
 }
-""".lstrip())
+""".lstrip()
+# """.lstrip())
 
-fragment_shader_id = d.compile_fragment_shader("""
+# fragment_shader_id = d.compile_fragment_shader("""
+fragment_shader = """
 #version 300 es
  
 // fragment shaders don't have a default precision so we need
@@ -114,25 +117,28 @@ void main() {
   //vec2 delta_dist = final_vert - screenSpace;
   //vec2 delta_ident = vec2(0.0, 1.0) - identifySpace;
 }
-""".lstrip())
+""".lstrip()
+# """.lstrip())
 
-program_id = d.create_program(vertex_shader_id, fragment_shader_id,
-uniforms={
-    "u_resolution": {"size": 2},
-    "u_color": {"size": 4},
-    "u_translation": {"size": 2},
-    "u_rotation": {"size": 2},
-    "u_scale": {"size": 2},
-},
-attributes={
-    "a_position": {"size": 2},
-})
+shader = d.new_shader(vertex_shader, fragment_shader)
+# program_id = d.create_program_old(vertex_shader_id, fragment_shader_id,
+# uniforms={
+#     "u_resolution": {"size": 2},
+#     "u_color": {"size": 4},
+#     "u_translation": {"size": 2},
+#     "u_rotation": {"size": 2},
+#     "u_scale": {"size": 2},
+# },
+# attributes={
+#     "a_position": {"size": 2},
+# })
 
 # Create a buffer and link it to the a_position attribute
-vertex_buffer = d.create_buffer()
-d.program_link_attributes(program_id, {
-    "a_position": vertex_buffer
-})
+ao = shader.new_array_object(["a_position"])
+# vertex_buffer = d.create_buffer()
+# d.program_link_attributes(program_id, {
+#     "a_position": vertex_buffer
+# })
 
 # Initialise the display context properties
 d.set_gl_viewport(0, 0, width, height)
@@ -141,20 +147,43 @@ d.set_gl_clear_color(0, 0, 0, 0)
 # Initial Clear of display context
 d.clear()
 
-def draw_rectangle(display, res_width, res_height, program_id, vertex_buffer, x, y, width, height, color):
+# def draw_rectangle(display, res_width, res_height, program_id, vertex_buffer, x, y, width, height, color):
+#     x1 = x
+#     x2 = x + width
+#     y1 = y
+#     y2 = y + height
+
+#     display.program_update_uniforms(program_id, {
+#         "u_resolution": [res_width, res_height],
+#         "u_color": [*color, 1],
+#         "u_translation": [0, 0],
+#         "u_rotation": [0,1],
+#         "u_scale": [1,1],
+#     })
+#     display.buffer_update_data(vertex_buffer, [
+#                 x1,y1,
+#                 x2,y1,
+#                 x1,y2,
+#                 x1,y2,
+#                 x2,y1,
+#                 x2,y2
+#     ])
+#     display.execute_program(program_id, "triangles")
+
+def draw_rectangle(shader, array_object, res_width, res_height, x, y, width, height, color):
     x1 = x
     x2 = x + width
     y1 = y
     y2 = y + height
 
-    display.program_update_uniforms(program_id, {
+    shader.update_uniforms({
         "u_resolution": [res_width, res_height],
         "u_color": [*color, 1],
         "u_translation": [0, 0],
         "u_rotation": [0,1],
         "u_scale": [1,1],
     })
-    display.buffer_update_data(vertex_buffer, [
+    array_object.modify([
                 x1,y1,
                 x2,y1,
                 x1,y2,
@@ -162,10 +191,10 @@ def draw_rectangle(display, res_width, res_height, program_id, vertex_buffer, x,
                 x2,y1,
                 x2,y2
     ])
-    display.execute_program(program_id, "triangles")
+    shader.execute(array_object)
 
 for i in range(100):
-    draw_rectangle(d, width, height, program_id, vertex_buffer, 
+    draw_rectangle(shader, ao, width, height, 
         random.randint(0,400), random.randint(0,400), # (x, y)
         random.randint(0,50), random.randint(0,50), # (width, height)
         (random.randint(50,256) / 255.0, random.randint(50,256) / 255.0, random.randint(50,256) / 255.0) # (r,g,b)

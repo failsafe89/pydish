@@ -33,7 +33,8 @@ d.init_display()
 width, height = d.get_resolution()
 print("Width: %d Height: %d" % (width, height))
 
-vertex_shader_id = d.compile_vertex_shader("""
+# vertex_shader_id = d.compile_vertex_shader("""
+vertex_shader = """
 #version 300 es
 
 // fragment shaders don't have a default precision so we need
@@ -76,9 +77,11 @@ void main() {
 
   //final_vert = translated_position;
 }
-""".lstrip())
+""".lstrip()
+# """.lstrip())
 
-fragment_shader_id = d.compile_fragment_shader("""
+# fragment_shader_id = d.compile_fragment_shader("""
+fragment_shader = """
 #version 300 es
  
 // fragment shaders don't have a default precision so we need
@@ -114,25 +117,30 @@ void main() {
   //vec2 delta_dist = final_vert - screenSpace;
   //vec2 delta_ident = vec2(0.0, 1.0) - identifySpace;
 }
-""".lstrip())
+""".lstrip()
+# """.lstrip())
 
-program_id = d.create_program(vertex_shader_id, fragment_shader_id,
-uniforms={
-    "u_resolution": {"size": 2},
-    "u_color": {"size": 4},
-    "u_translation": {"size": 2},
-    "u_rotation": {"size": 2},
-    "u_scale": {"size": 2},
-},
-attributes={
-    "a_position": {"size": 2},
-})
+shader = d.new_shader(vertex_shader, fragment_shader)
+ao = shader.new_array_object(["a_position"])
+# exit(0)
+
+# program_id = d.create_program_old(vertex_shader_id, fragment_shader_id,
+# uniforms={
+#     "u_resolution": {"size": 2},
+#     "u_color": {"size": 4},
+#     "u_translation": {"size": 2},
+#     "u_rotation": {"size": 2},
+#     "u_scale": {"size": 2},
+# },
+# attributes={
+#     "a_position": {"size": 2},
+# })
 
 # Create a buffer and link it to the a_position attribute
-vertex_buffer = d.create_buffer()
-d.program_link_attributes(program_id, {
-    "a_position": vertex_buffer
-})
+# vertex_buffer = d.create_buffer()
+# d.program_link_attributes(program_id, {
+#     "a_position": vertex_buffer
+# })
 
 # Initialise the display context properties
 d.set_gl_viewport(0, 0, width, height)
@@ -141,15 +149,50 @@ d.set_gl_clear_color(0, 0, 0, 0)
 # Initial Clear of display context
 d.clear()
 
-def draw_F(display, res_width, res_height, program_id, vertex_buffer, x, y, r, s, color):
-    display.program_update_uniforms(program_id, {
+# def draw_F(display, res_width, res_height, program_id, vertex_buffer, x, y, r, s, color):
+#     display.program_update_uniforms(program_id, {
+#         "u_resolution": [res_width, res_height],
+#         "u_color": [*color, 1],
+#         "u_translation": [x, y],
+#         "u_rotation": r,
+#         "u_scale": s,
+#     })
+#     display.buffer_update_data(vertex_buffer, [
+#         # left column
+#         0.0,0.0,
+#         30.0,0.0,
+#         0.0,150.0,
+#         0.0,150.0,
+#         30.0,0.0,
+#         30.0,150.0,
+
+#         # top rung
+#         30.0,0.0,
+#         100.0,0.0,
+#         30.0,30.0,
+#         30.0,30.0,
+#         100.0,0.0,
+#         100.0,30.0,
+
+#         # middle rung
+#         30.0,60.0,
+#         67.0,60.0,
+#         30.0,90.0,
+#         30.0,90.0,
+#         67.0,60.0,
+#         67.0,90.0
+#     ])
+#     display.execute_program(program_id, "triangles")
+
+def draw_F(shader, array_object, res_width, res_height, x, y, r, s, color):
+    shader.update_uniforms({
         "u_resolution": [res_width, res_height],
         "u_color": [*color, 1],
         "u_translation": [x, y],
         "u_rotation": r,
         "u_scale": s,
     })
-    display.buffer_update_data(vertex_buffer, [
+    array_object.modify([
         # left column
         0.0,0.0,
         30.0,0.0,
@@ -174,10 +217,11 @@ def draw_F(display, res_width, res_height, program_id, vertex_buffer, x, y, r, s
         67.0,60.0,
         67.0,90.0
     ])
-    display.execute_program(program_id, "triangles")
+    shader.execute(array_object)
 
 color = [random.randint(8,255)/255.0, random.randint(8,255)/255.0, random.randint(8,255)/255.0]
-draw_F(d, width, height, program_id, vertex_buffer, 100, 100, [0.0,1.0], [1.0,1.0], color)
+# draw_F(d, width, height, program_id, vertex_buffer, 100, 100, [0.0,1.0], [1.0,1.0], color)
+draw_F(shader, ao, width, height, 100, 100, [0.0,1.0], [1.0,1.0], color)
 d.update_canvas()
 
 print("Press ENTER to exit")

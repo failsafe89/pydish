@@ -57,7 +57,7 @@ def start_server(display_recv, input_recv, api_send):
 def run():
     global CONNECTOR_PROCESS
     global CONNECTOR_API_SEND
-    global CONNECTOR_INPUT_API_RECV, CONNECTOR_INPUT_API_SEND
+    global CONNECTOR_INPUT_API_RECV#, CONNECTOR_INPUT_API_SEND
 
     if CONNECTOR_PROCESS is None:
         CONNECTOR_PROCESS = Process(target=start_server, args=(
@@ -73,6 +73,18 @@ def shutdown():
         CONNECTOR_PROCESS.kill()
         CONNECTOR_PROCESS.join()
         CONNECTOR_PROCESS = None
+
+def api_display_send(func, *args, **kwargs):
+    CONNECTOR_API_SEND.put_nowait({
+        'api': 'display',
+        'msg': {
+            'func': func,
+            'args': args,
+            'kwargs': kwargs
+        }
+    })
+    r = CONNECTOR_DISPLAY_API_RECV.get()
+    return r
 
 class Display(object):
     def __init__(self):
@@ -194,14 +206,30 @@ class Display(object):
         print(r)
         return r['response']['data']['id']
 
-    def create_program(self, vertex_shader_id, fragment_shader_id, uniforms=None, attributes=None):
+    def create_program(self, vertex_shader_id, fragment_shader_id):
+        self.sendq.put_nowait({
+            "api": "display",
+            "msg": {
+                "func": "create_program",
+                "args": [
+                    vertex_shader_id,
+                    fragment_shader_id
+                ],
+                "kwargs": {}
+            }
+        })
+        r = self.recvq.get()
+        print(r)
+        return r['response']['data']
+
+    def create_program_old(self, vertex_shader_id, fragment_shader_id, uniforms=None, attributes=None):
         uniforms = {} if uniforms is None else uniforms
         attributes = {} if attributes is None else attributes
 
         self.sendq.put_nowait({
             "api": "display",
             "msg": {
-                "func": "create_program",
+                "func": "create_program_old",
                 "args": [
                     vertex_shader_id,
                     fragment_shader_id
@@ -228,6 +256,22 @@ class Display(object):
         r = self.recvq.get()
         print(r)
         return r['response']['data']['id']
+
+    def bind_buffer(self, target_string, buffer_id):
+        self.sendq.put_nowait({
+            "api": "display",
+            "msg": {
+                "func": "bind_buffer",
+                "args": [
+                    target_string,
+                    buffer_id
+                ],
+                "kwargs": {}
+            }
+        })
+        r = self.recvq.get()
+        print(r)
+        return None
 
     def buffer_update_data(self, buffer, data):
         self.sendq.put_nowait({
@@ -277,6 +321,25 @@ class Display(object):
         print(r)
         return None
 
+    def draw_arrays(self, program_id, vao_id, draw_type_string, first, count):
+        self.sendq.put_nowait({
+            "api": "display",
+            "msg": {
+                "func": "draw_arrays",
+                "args": [
+                    program_id,
+                    vao_id,
+                    draw_type_string,
+                    first,
+                    count
+                ],
+                "kwargs": {}
+            }
+        })
+        r = self.recvq.get()
+        print(r)
+        return None
+
     def execute_program(self, program_id, draw_type):
         self.sendq.put_nowait({
             "api": "display",
@@ -292,3 +355,207 @@ class Display(object):
         r = self.recvq.get()
         print(r)
         return None
+
+    def enable_vertex_attrib_array(self, location):
+        self.sendq.put_nowait({
+            "api": "display",
+            "msg": {
+                "func": "enable_vertex_attrib_array",
+                "args": [
+                    location
+                ],
+                "kwargs": {}
+            }
+        })
+        r = self.recvq.get()
+        print(r)
+        return None
+    
+    def use_program(self, program_id):
+        self.sendq.put_nowait({
+            "api": "display",
+            "msg": {
+                "func": "use_program",
+                "args": [
+                    program_id
+                ],
+                "kwargs": {}
+            }
+        })
+        r = self.recvq.get()
+        print(r)
+        return None
+
+    def create_vertex_array(self):
+        self.sendq.put_nowait({
+            "api": "display",
+            "msg": {
+                "func": "create_vertex_array",
+                "args": [],
+                "kwargs": {}
+            }
+        })
+        r = self.recvq.get()
+        print(r)
+        return r['response']['data']['id']
+
+    def bind_vertex_array(self, vao):
+        self.sendq.put_nowait({
+            "api": "display",
+            "msg": {
+                "func": "bind_vertex_array",
+                "args": [
+                    vao
+                ],
+                "kwargs": {}
+            }
+        })
+        r = self.recvq.get()
+        print(r)
+        return None
+
+    def vertex_attrib_pointer(self, location, size, attrib_type, stride, offset):
+        self.sendq.put_nowait({
+            "api": "display",
+            "msg": {
+                "func": "vertex_attrib_pointer",
+                "args": [
+                    location,
+                    size,
+                    attrib_type,
+                    stride,
+                    offset
+                ],
+                "kwargs": {}
+            }
+        })
+        r = self.recvq.get()
+        print(r)
+        return None
+
+    def buffer_data(self, target, data):
+        self.sendq.put_nowait({
+            "api": "display",
+            "msg": {
+                "func": "buffer_data",
+                "args": [
+                    target,
+                    data
+                ],
+                "kwargs": {}
+            }
+        })
+        r = self.recvq.get()
+        print(r)
+        return None
+
+    def new_shader(self, vertex_code, fragment_code):
+        s = Shader(self, vertex_code, fragment_code)
+        return s
+
+class Shader(object):
+    def __init__(self, display, vertex_code, fragment_code):
+        self.display = display
+        self.vertex_shader = self.display.compile_vertex_shader(vertex_code)
+        self.fragment_shader = self.display.compile_fragment_shader(fragment_code)
+        self.program_info = self.display.create_program(self.vertex_shader, self.fragment_shader)
+        self.id = self.program_info['id']
+        self.uniforms = self.program_info['uniforms']
+        self.attributes = self.program_info['attributes']
+
+    def update_uniforms(self, uniforms):
+        self.display.use_program(self.id)
+        self.display.program_update_uniforms(self.id, uniforms)
+
+    def new_array_object(self, layout):
+        self.display.use_program(self.id)
+        b = ArrayObject(self.display, self.attributes, layout)
+        return b
+
+    def execute(self, array_object, draw_type_string="triangles"):
+        # self.display.use_program(self.id)
+        # self.display.bind_vertex_array(array_object.id)
+        self.display.draw_arrays(self.id, array_object.id, draw_type_string, array_object.first, array_object.count)
+
+class ArrayObject(object):
+    def __init__(self, display, attributes, layout):
+        self.display = display
+        self.attributes = attributes
+        self.layout = layout
+        self.array_buffer = self.display.create_buffer()
+        self.id = self.display.create_vertex_array()
+
+        self.display.bind_vertex_array(self.id)
+        self.display.bind_buffer("ARRAY_BUFFER", self.array_buffer)
+        offset = 0
+        self.stride_size = sum([
+            self.attributes[x]['type_info']['base_size'] * 
+            self.attributes[x]['type_info']['base_layout'][0] *
+            self.attributes[x]['type_info']['base_layout'][1]
+            for x in self.layout
+        ])
+        self.vertex_size = sum([
+            self.attributes[x]['type_info']['base_layout'][0] *
+            self.attributes[x]['type_info']['base_layout'][1]
+            for x in self.layout
+        ])
+        for a in self.layout:
+            self.attributes[a]['offset'] = offset
+            ncol,nrow = self.attributes[a]['type_info']['base_layout']
+            for i in range(nrow):
+                self.display.enable_vertex_attrib_array(self.attributes[a]['loc'])
+                self.display.vertex_attrib_pointer(
+                    self.attributes[a]['loc']+i,
+                    ncol,
+                    self.attributes[a]['type_info']['base_type'],
+                    self.stride_size,
+                    offset
+                )
+                offset += (
+                    self.attributes[a]['type_info']['base_size'] *
+                    self.attributes[a]['type_info']['base_layout'][0] *
+                    self.attributes[a]['type_info']['base_layout'][1]
+                )
+        
+        self.data = []
+        self._first = 0
+        self._count = 0
+        self.first = 0
+        self.count = 0
+
+    @property
+    def count(self):
+        return self._draw_count
+
+    def _calc_draw_count(self):
+        # print("Calculating draw count")
+        # calculate self._draw_count based on self._first and self._count
+        size = len(self.data) - self._first
+        print(f"Stride size: {self.stride_size}")
+        print(f"Vertex size: {self.vertex_size}")
+        total = int(size // self.vertex_size)
+        if self._count == 0:
+            self._draw_count = total
+        else:
+            self._draw_count = min([self._count, total])
+        print(f"Calculated Draw Count: {self._draw_count}")
+
+    @count.setter
+    def count(self, value):
+        self._count = value
+        self._calc_draw_count()
+
+    @property
+    def first(self):
+        return self._first
+
+    @first.setter
+    def first(self, value):
+        self._first = value
+        self._calc_draw_count()
+
+    def modify(self, data):
+        self.data = data
+        self.display.bind_buffer("ARRAY_BUFFER", self.array_buffer)
+        self.display.buffer_data("ARRAY_BUFFER", data)
+        self._calc_draw_count()
